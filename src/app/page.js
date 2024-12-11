@@ -76,7 +76,7 @@ const AreaCalculator = () => {
           cursor: "pointer",
         }}
       >
-        Mark Coordinate
+        Mark Coordinate test 2
       </button>
       <button
         onClick={calculateArea}
