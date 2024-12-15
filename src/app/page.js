@@ -1,112 +1,103 @@
-'use client';
+"use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import * as turf from "@turf/turf";
 
 const AreaCalculator = () => {
-  const [coordinates, setCoordinates] = useState([]);
-  const [area, setArea] = useState(null);
+  const [coordinates, setCoordinates] = useState([]); // Array to store marked coordinates
+  const [area, setArea] = useState(null); // Area result
+  const [locationError, setLocationError] = useState(null); // Error for location access
 
-  // Relaxed precision value for detecting duplicate coordinates
-  const precision = 0.000001; // ~0.1 meter precision
-
+  // Function to mark coordinates using the smartphone's GPS
   const markCoordinate = () => {
-    if (navigator.geolocation) {
-      const watchId = navigator.geolocation.watchPosition(
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
-          const newCoordinate = [longitude, latitude];
 
-          // Check if the new coordinate is already in the list to avoid duplicates based on precision
-          const isDuplicate = coordinates.some((coord) => {
-            return (
-              Math.abs(coord[0] - newCoordinate[0]) < precision &&
-              Math.abs(coord[1] - newCoordinate[1]) < precision
-            );
-          });
+          const newPoint = [longitude, latitude];
+          setCoordinates((prevCoords) => [...prevCoords, newPoint]);
 
-          if (isDuplicate) {
-            alert("You are already at this location!");
-          } else {
-            setCoordinates([...coordinates, newCoordinate]);
-            // Stop watching after capturing the coordinate
-            navigator.geolocation.clearWatch(watchId);
-          }
+          setLocationError(null);
         },
         (error) => {
-          console.error("Error fetching location:", error.message);
-          alert("Unable to fetch location. Please enable location services.");
+          console.error("Error getting location:", error);
+          setLocationError("Failed to fetch location. Please allow location access.");
         },
         {
           enableHighAccuracy: true,
-          timeout: 15000,
+          timeout: 5000,
           maximumAge: 0,
         }
       );
     } else {
-      alert("Geolocation is not supported by this browser.");
+      setLocationError("Geolocation is not supported by this browser.");
     }
   };
 
+  // Function to calculate the area
   const calculateArea = () => {
     if (coordinates.length < 3) {
-      alert("You need at least 3 coordinates to calculate the area.");
+      alert("At least 3 coordinates are required to calculate the area.");
       return;
     }
 
-    // Close the polygon by connecting the last point to the first
+    // Close the polygon by adding the first point to the end
     const closedCoordinates = [...coordinates, coordinates[0]];
 
+    // Create a polygon
     const polygon = turf.polygon([closedCoordinates]);
-    const calculatedArea = turf.area(polygon); // Area in square meters
-    setArea(calculatedArea);
+
+    // Calculate the area in square meters
+    const calculatedArea = turf.area(polygon);
+    setArea(calculatedArea.toFixed(2)); // Round the area to 2 decimal places
   };
 
   return (
-    <div style={{ textAlign: "center", padding: "20px" }}>
+    <div style={{ textAlign: "center", marginTop: "50px" }}>
       <h1>Area Calculator</h1>
-      <button
-        onClick={markCoordinate}
-        style={{
-          margin: "10px",
-          padding: "10px 20px",
-          backgroundColor: "#28a745",
-          color: "#fff",
-          border: "none",
-          cursor: "pointer",
-        }}
-      >
-        Mark Coordinate test 2
-      </button>
-      <button
-        onClick={calculateArea}
-        style={{
-          margin: "10px",
-          padding: "10px 20px",
-          backgroundColor: "#007bff",
-          color: "#fff",
-          border: "none",
-          cursor: "pointer",
-        }}
-      >
-        Submit & Calculate Area
-      </button>
 
-      <div style={{ marginTop: "20px" }}>
-        <h3>Marked Coordinates:</h3>
-        <ul>
-          {coordinates.map((coord, index) => (
-            <li key={index}>
-              Lat: {coord[1]}, Lng: {coord[0]}
-            </li>
-          ))}
-        </ul>
+      <div style={{ marginBottom: "20px" }}>
+        <button
+          onClick={markCoordinate}
+          style={{
+            padding: "10px 20px",
+            fontSize: "16px",
+            marginRight: "10px",
+            cursor: "pointer",
+          }}
+        >
+          Mark Coordinate
+        </button>
+
+        <button
+          onClick={calculateArea}
+          style={{
+            padding: "10px 20px",
+            fontSize: "16px",
+            cursor: "pointer",
+          }}
+        >
+          Calculate Area 3
+        </button>
       </div>
 
-      {area !== null && (
+      {locationError && <p style={{ color: "red" }}>{locationError}</p>}
+
+      <h3>Marked Coordinates:</h3>
+      <ul>
+        {coordinates.map((coord, index) => (
+          <li key={index}>
+            Point {index + 1}: Lat: {coord[1]}, Lng: {coord[0]}
+          </li>
+        ))}
+      </ul>
+
+      {area && (
         <div style={{ marginTop: "20px" }}>
-          <h2>Calculated Area:</h2>
-          <p>{area.toFixed(2)} square meters</p>
+          <h2>
+            Calculated Area: <span style={{ color: "green" }}>{area} m²</span>
+          </h2>
         </div>
       )}
     </div>
