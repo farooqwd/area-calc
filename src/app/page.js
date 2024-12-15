@@ -4,19 +4,32 @@ import React, { useState } from "react";
 import * as turf from "@turf/turf";
 
 const AreaCalculator = () => {
-  const [coordinates, setCoordinates] = useState([]); // Array to store marked coordinates
-  const [area, setArea] = useState(null); // Area result
-  const [locationError, setLocationError] = useState(null); // Error for location access
+  const [coordinates, setCoordinates] = useState([]); // Store marked coordinates
+  const [area, setArea] = useState(null); // Store calculated area
+  const [locationError, setLocationError] = useState(null); // Error handling
 
-  // Function to mark coordinates using the smartphone's GPS
+  // Function to mark precise coordinates
   const markCoordinate = () => {
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          const { latitude, longitude } = position.coords;
+          const latitude = Number(position.coords.latitude.toFixed(7)); // Point precision
+          const longitude = Number(position.coords.longitude.toFixed(7)); // Point precision
 
           const newPoint = [longitude, latitude];
-          setCoordinates((prevCoords) => [...prevCoords, newPoint]);
+
+          // Avoid adding duplicate points
+          setCoordinates((prevCoords) => {
+            if (
+              prevCoords.length > 0 &&
+              prevCoords[prevCoords.length - 1][0] === newPoint[0] &&
+              prevCoords[prevCoords.length - 1][1] === newPoint[1]
+            ) {
+              alert("Point already marked, move to a new position.");
+              return prevCoords;
+            }
+            return [...prevCoords, newPoint];
+          });
 
           setLocationError(null);
         },
@@ -25,7 +38,7 @@ const AreaCalculator = () => {
           setLocationError("Failed to fetch location. Please allow location access.");
         },
         {
-          enableHighAccuracy: true,
+          enableHighAccuracy: true, // High precision GPS
           timeout: 5000,
           maximumAge: 0,
         }
@@ -49,22 +62,33 @@ const AreaCalculator = () => {
     const polygon = turf.polygon([closedCoordinates]);
 
     // Calculate the area in square meters
-    const calculatedArea = turf.area(polygon);
-    setArea(calculatedArea.toFixed(2)); // Round the area to 2 decimal places
+    const calculatedAreaMeters = turf.area(polygon);
+
+    // Convert the area to square feet (1 m² = 10.7639 ft²)
+    const calculatedAreaFeet = calculatedAreaMeters * 10.7639;
+
+    setArea({
+      meters: calculatedAreaMeters.toFixed(2),
+      feet: calculatedAreaFeet.toFixed(2),
+    });
   };
 
   return (
-    <div style={{ textAlign: "center", marginTop: "50px" }}>
-      <h1>Area Calculator</h1>
+    <div style={{ textAlign: "center", marginTop: "20px", fontFamily: "Arial, sans-serif" }}>
+      <h1 style={{ marginBottom: "10px" }}>High Precision Area Calculator</h1>
 
       <div style={{ marginBottom: "20px" }}>
         <button
           onClick={markCoordinate}
           style={{
             padding: "10px 20px",
+            margin: "5px",
             fontSize: "16px",
-            marginRight: "10px",
+            backgroundColor: "#4CAF50",
+            color: "white",
+            border: "none",
             cursor: "pointer",
+            borderRadius: "5px",
           }}
         >
           Mark Coordinate
@@ -74,18 +98,23 @@ const AreaCalculator = () => {
           onClick={calculateArea}
           style={{
             padding: "10px 20px",
+            margin: "5px",
             fontSize: "16px",
+            backgroundColor: "#008CBA",
+            color: "white",
+            border: "none",
             cursor: "pointer",
+            borderRadius: "5px",
           }}
         >
-          Calculate Area 3
+          Calculate Area 4
         </button>
       </div>
 
       {locationError && <p style={{ color: "red" }}>{locationError}</p>}
 
-      <h3>Marked Coordinates:</h3>
-      <ul>
+      <h3 style={{ marginTop: "20px" }}>Marked Coordinates (High Precision):</h3>
+      <ul style={{ listStyleType: "none", padding: "0" }}>
         {coordinates.map((coord, index) => (
           <li key={index}>
             Point {index + 1}: Lat: {coord[1]}, Lng: {coord[0]}
@@ -95,9 +124,9 @@ const AreaCalculator = () => {
 
       {area && (
         <div style={{ marginTop: "20px" }}>
-          <h2>
-            Calculated Area: <span style={{ color: "green" }}>{area} m²</span>
-          </h2>
+          <h2 style={{ color: "green" }}>Calculated Area:</h2>
+          <p>{area.meters} m²</p>
+          <p>{area.feet} ft²</p>
         </div>
       )}
     </div>
